@@ -1,6 +1,6 @@
 ---
 name: medical-cn-bencao-review
-description: Build, audit, and format reproducible Chinese materia medica textual-research manuscripts for any target herb or medicinal material. Use for 本草考证、历代名称与异名、基原与药用部位、性味归经与毒性、古籍PDF页码校证、现代药理病理衔接、中文核心审稿修改、AMA顺序编码、核心证据表及投稿Word逐页检查。
+description: Build, audit, review, and format reproducible Chinese materia medica textual-research manuscripts for any target herb or medicinal material. Use for 本草考证、历代名称与异名、基原与药用部位、性味归经与毒性、古籍PDF页码校证、现代药理病理衔接、中文核心模拟审稿、证据降调、去模板化AI语言、AMA顺序编码、核心证据表及投稿Word逐页检查。
 ---
 
 # 可复制的中文本草考证工作流
@@ -32,6 +32,7 @@ description: Build, audit, and format reproducible Chinese materia medica textua
 | `TARGET_JOURNAL` | 目标期刊、文章类型、字数和格式要求 |
 | `TABLE_POLICY` | 默认两张核心表；用户批准后方可调整数量或字段 |
 | `CITATION_POLICY` | 默认AMA顺序编码；同时记录语言、页码和网页访问日期要求 |
+| `REVIEW_PROFILE` | 目标期刊审稿侧重点；默认执行中文核心本草类Reviewer 2复审 |
 | `OUTPUTS` | 证据台账、初稿、DOCX、审计报告等交付物 |
 
 不得把样文中的药名、专属判断、表格行或参考文献直接迁移到目标药物。样文只用于学习问题设置、时间组织、论证密度和版式。
@@ -136,7 +137,23 @@ python scripts/reorder_ama.py manuscript.md
 
 详细规则见 [references/ama-and-audit.md](references/ama-and-audit.md)。
 
-## 8. 生成和逐页核查Word
+## 8. 强制执行Reviewer 2反向审稿
+
+完整初稿形成后，必须切换为独立审稿人角色，读取 [references/reviewer-and-deai.md](references/reviewer-and-deai.md)，完成“初审 -> 修改 -> 复审”闭环。不得在未形成审稿问题清单前直接做表面润色。
+
+审稿人逐句检查：论断与引用是否匹配、结论是否越过证据等级、古今药名与基原是否混用、传统术语是否被强行现代化、复方或成分证据是否被归给单味药，以及创新性是否只是资料堆积。
+
+同时检查模板化和空泛语言。修改目标是提高具体性、证据密度和作者判断，不是机械替换同义词或迎合所谓AI检测器。古籍直接引文、法规原文和确有必要的固定术语不得为“去AI味”而改写。
+
+可先运行风险标记器：
+
+```bash
+python scripts/reviewer_lint.py manuscript.md --output reviewer-language-audit.md
+```
+
+脚本只生成线索，不自动修改文章。审稿人必须结合上下文逐项判定，并输出《模拟审稿意见》和逐句修改台账。完成修改后重新运行AMA审计；引用顺序可能因删改而变化。
+
+## 9. 生成和逐页核查Word
 
 编辑既有DOCX时优先原位修改并保留用户指定字体、字号和样式。由Markdown新建时可运行：
 
@@ -148,7 +165,7 @@ python scripts/build_bencao_docx.py manuscript.md manuscript.docx
 
 生成后必须把DOCX渲染为逐页图像或PDF，从第一页检查到末页。详细规则见 [references/word-and-qa.md](references/word-and-qa.md)。
 
-## 9. 交付门禁
+## 10. 交付门禁
 
 仅在以下项目全部通过或明确披露限制后交付：
 
@@ -159,11 +176,13 @@ python scripts/build_bencao_docx.py manuscript.md manuscript.docx
 5. 两张默认表或经批准的替代表格逐行可追溯，未载字段保持“不详”。
 6. AMA首次引用顺序连续，无漏引、未定义引用、重复书目或未被引用书目。
 7. 现代药理、病理和临床证据没有越级外推，复方与单味药结论已分开。
-8. 文稿语言、参考文献构成、字数、字体和字号符合目标期刊或用户要求。
-9. DOCX已逐页检查表头、横竖版切换、字体替换、文字截断、URL溢出和异常空白。
-10. 交付说明列明已完成内容、所用来源、自动检查结果和仍需原件复核的缺口。
+8. Reviewer 2已完成初审、逐句修改和复审；所有Major问题已解决或列为未解决限制。
+9. 空泛价值判断、模板化衔接和无证据强结论已删除或具体化；直接引文未被误改。
+10. 修改后重新完成AMA审计，文稿语言、字数、字体和字号符合目标期刊或用户要求。
+11. DOCX已逐页检查表头、横竖版切换、字体替换、文字截断、URL溢出和异常空白。
+12. 交付说明列明已完成内容、模拟审稿意见、逐句修改台账、自动检查结果和仍需原件复核的缺口。
 
-## 10. 可复制启动指令
+## 11. 可复制启动指令
 
 ```text
 使用 $medical-cn-bencao-review 对【TARGET_HERB】开展本草考证。
@@ -173,6 +192,7 @@ python scripts/build_bencao_docx.py manuscript.md manuscript.docx
 目标期刊与字数：【TARGET_JOURNAL】
 表格要求：默认两张核心表；如需调整先说明理由并征得同意。
 引用与字体：AMA顺序编码；中文和西文字体按期刊或用户要求。
-交付：证据台账、问题轴/时间轴初稿、参考文献审计、逐页检查后的DOCX。
+交付：证据台账、问题轴/时间轴初稿、模拟审稿意见、逐句修改台账、参考文献审计、逐页检查后的DOCX。
 先报告来源命中情况和关键缺口，再进入写作；不得引用未核验原文或虚构页码。
+初稿完成后强制切换Reviewer 2模式，先独立提出问题，再修改并复审，不得跳过。
 ```
