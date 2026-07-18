@@ -1,4 +1,4 @@
 interface:
-  display_name: "中文本草考证审稿"
-  short_description: "书源优先校证、岐黄检索、AMA审核与中文核心Word成稿"
-  default_prompt: "使用 $medical-cn-bencao-review：先读取《历代本草药性汇解》合法PDF并检索岐黄之术，再完成本草证据校核、AMA重排和Word生成。"
+  display_name: "可复制本草考证"
+  short_description: "任意药物的书源校证、证据台账、AMA审核与Word成稿"
+  default_prompt: "使用 $medical-cn-bencao-review 对【目标药物】执行可复制本草考证工作流：先冻结药名异名、研究范围和来源矩阵，读取合法PDF，检索岐黄之术并回核原书，建立证据台账，再完成问题轴/时间轴论证、核心证据表、AMA引用和Word逐页检查。"
