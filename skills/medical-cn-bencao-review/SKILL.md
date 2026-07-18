@@ -1,6 +1,6 @@
 ---
 name: medical-cn-bencao-review
-description: Build, audit, review, and format reproducible Chinese materia medica textual-research manuscripts for any target herb or medicinal material. Use for 本草考证、历代名称与异名、基原与药用部位、性味归经与毒性、古籍PDF页码校证、现代药理病理衔接、中文核心模拟审稿、证据降调、去模板化AI语言、AMA顺序编码、核心证据表及投稿Word逐页检查。
+description: Build, audit, multi-stage review, revise, and format reproducible Chinese materia medica manuscripts for any target herb or medicinal material. Use for 本草考证、历代名称与异名、基原与药性演变、古籍PDF校证、现代药理病理衔接、中文核心编辑初审、三名独立同行评审、交叉互审、模拟主编终审、修改后复审、证据降调、去模板化AI语言、AMA引用及投稿Word检查。
 ---
 
 # 可复制的中文本草考证工作流
@@ -32,7 +32,7 @@ description: Build, audit, review, and format reproducible Chinese materia medic
 | `TARGET_JOURNAL` | 目标期刊、文章类型、字数和格式要求 |
 | `TABLE_POLICY` | 默认两张核心表；用户批准后方可调整数量或字段 |
 | `CITATION_POLICY` | 默认AMA顺序编码；同时记录语言、页码和网页访问日期要求 |
-| `REVIEW_PROFILE` | 目标期刊审稿侧重点；默认执行中文核心本草类Reviewer 2复审 |
+| `REVIEW_PROFILE` | 目标期刊审稿侧重点；默认执行中文核心本草类六阶段模拟审稿 |
 | `OUTPUTS` | 证据台账、初稿、DOCX、审计报告等交付物 |
 
 不得把样文中的药名、专属判断、表格行或参考文献直接迁移到目标药物。样文只用于学习问题设置、时间组织、论证密度和版式。
@@ -137,13 +137,13 @@ python scripts/reorder_ama.py manuscript.md
 
 详细规则见 [references/ama-and-audit.md](references/ama-and-audit.md)。
 
-## 8. 强制执行Reviewer 2反向审稿
+## 8. 强制执行多阶段模拟审稿
 
-完整初稿形成后，必须切换为独立审稿人角色，读取 [references/reviewer-and-deai.md](references/reviewer-and-deai.md)，完成“初审 -> 修改 -> 复审”闭环。不得在未形成审稿问题清单前直接做表面润色。
+内部工作稿形成后、向用户提交任何论文初稿前，必须读取 [references/reviewer-and-deai.md](references/reviewer-and-deai.md)，依次完成“编辑初审 -> 三名同行独立评审 -> 交叉互审 -> 模拟主编终审 -> 作者修改 -> 原审稿人复审”。不得在未形成独立审稿意见前直接做表面润色。
 
-审稿人逐句检查：论断与引用是否匹配、结论是否越过证据等级、古今药名与基原是否混用、传统术语是否被强行现代化、复方或成分证据是否被归给单味药，以及创新性是否只是资料堆积。
+三名同行分别负责本草文献与名物考证、中药学与研究方法、期刊结构与学术表达。独立评审阶段使用同一冻结输入包且互不可见；完成后才允许交叉互审。环境支持子代理时优先隔离执行，否则以三个独立角色分轮落盘，不得让后续角色附和前一份意见。
 
-同时检查模板化和空泛语言。修改目标是提高具体性、证据密度和作者判断，不是机械替换同义词或迎合所谓AI检测器。古籍直接引文、法规原文和确有必要的固定术语不得为“去AI味”而改写。
+编辑初审低于75分、存在真实性/数据/伦理/核心方法阻断项，或模拟主编不允许修改时，停止自动改稿并向用户报告缺口。不得用语言润色掩盖根本问题，也不得因评分较高越过阻断项。
 
 可先运行风险标记器：
 
@@ -151,7 +151,7 @@ python scripts/reorder_ama.py manuscript.md
 python scripts/reviewer_lint.py manuscript.md --output reviewer-language-audit.md
 ```
 
-脚本只生成线索，不自动修改文章。审稿人必须结合上下文逐项判定，并输出《模拟审稿意见》和逐句修改台账。完成修改后重新运行AMA审计；引用顺序可能因删改而变化。
+脚本只生成线索，不自动修改文章。最终至少形成编辑初审、三份独立审稿意见、交叉互审表、模拟主编终审、作者响应台账和三份复审意见。完成修改后重新运行AMA审计；引用顺序可能因删改而变化。
 
 ## 9. 生成和逐页核查Word
 
@@ -176,11 +176,12 @@ python scripts/build_bencao_docx.py manuscript.md manuscript.docx
 5. 两张默认表或经批准的替代表格逐行可追溯，未载字段保持“不详”。
 6. AMA首次引用顺序连续，无漏引、未定义引用、重复书目或未被引用书目。
 7. 现代药理、病理和临床证据没有越级外推，复方与单味药结论已分开。
-8. Reviewer 2已完成初审、逐句修改和复审；所有Major问题已解决或列为未解决限制。
-9. 空泛价值判断、模板化衔接和无证据强结论已删除或具体化；直接引文未被误改。
-10. 修改后重新完成AMA审计，文稿语言、字数、字体和字号符合目标期刊或用户要求。
-11. DOCX已逐页检查表头、横竖版切换、字体替换、文字截断、URL溢出和异常空白。
-12. 交付说明列明已完成内容、模拟审稿意见、逐句修改台账、自动检查结果和仍需原件复核的缺口。
+8. 编辑初审、三名独立评审、交叉互审、模拟主编终审、作者修改和原审稿人复审均已完成。
+9. 所有A级问题已解决；未解决B-D级问题、真实性/伦理/方法阻断项均已披露，且未把受阻稿件称为可投稿稿。
+10. 空泛价值判断、模板化衔接和无证据强结论已删除或具体化；锁定数据与直接引文未被误改。
+11. 修改后重新完成AMA审计，文稿语言、字数、字体和字号符合已核目标期刊要求或通用配置。
+12. DOCX已逐页检查表头、横竖版切换、字体替换、文字截断、URL溢出和异常空白。
+13. 交付说明列明全部模拟审稿材料、作者响应、自动检查结果和仍需原件复核的缺口。
 
 ## 11. 可复制启动指令
 
@@ -192,7 +193,7 @@ python scripts/build_bencao_docx.py manuscript.md manuscript.docx
 目标期刊与字数：【TARGET_JOURNAL】
 表格要求：默认两张核心表；如需调整先说明理由并征得同意。
 引用与字体：AMA顺序编码；中文和西文字体按期刊或用户要求。
-交付：证据台账、问题轴/时间轴初稿、模拟审稿意见、逐句修改台账、参考文献审计、逐页检查后的DOCX。
+交付：证据台账、问题轴/时间轴修订稿、多阶段模拟审稿包、作者响应台账、参考文献审计、逐页检查后的DOCX。
 先报告来源命中情况和关键缺口，再进入写作；不得引用未核验原文或虚构页码。
-初稿完成后强制切换Reviewer 2模式，先独立提出问题，再修改并复审，不得跳过。
+内部工作稿完成后强制执行编辑初审、三名独立同行评审、交叉互审、模拟主编终审、作者修改及原审稿人复审；完整流程通过前不得称为可投稿初稿。
 ```
