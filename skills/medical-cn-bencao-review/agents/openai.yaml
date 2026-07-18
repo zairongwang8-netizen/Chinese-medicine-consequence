@@ -1,4 +1,4 @@
 interface:
   display_name: "中文本草考证审稿"
-  short_description: "古籍页码校证、AMA引用审核与中文核心Word成稿流程"
-  default_prompt: "使用 $medical-cn-bencao-review 对中药本草考证稿进行证据校核、AMA重排并生成Word。"
+  short_description: "书源优先校证、岐黄检索、AMA审核与中文核心Word成稿"
+  default_prompt: "使用 $medical-cn-bencao-review：先读取《历代本草药性汇解》合法PDF并检索岐黄之术，再完成本草证据校核、AMA重排和Word生成。"
