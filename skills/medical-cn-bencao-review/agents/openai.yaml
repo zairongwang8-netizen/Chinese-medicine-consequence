@@ -1,4 +1,4 @@
 interface:
   display_name: "可复制本草考证"
-  short_description: "任意药物的书源校证、六阶段模拟审稿、AMA审核与Word成稿"
-  default_prompt: "使用 $medical-cn-bencao-review 对【目标药物】执行可复制本草考证：冻结变量和来源，校证合法PDF并建立证据台账，形成内部工作稿；提交用户前强制完成编辑初审、三名独立同行评审、交叉互审、模拟主编终审、作者修改和原审稿人复审，再完成AMA引用与Word逐页检查。"
+  short_description: "任意药物的书源校证、六阶段审稿、期刊引文审核与Word成稿"
+  default_prompt: "使用 $medical-cn-bencao-review 对【目标药物】执行可复制本草考证：冻结变量和来源，校证合法PDF并建立证据台账，核验【目标期刊】当前官方投稿须知并建立引文格式画像；形成内部工作稿后完成编辑初审、三名独立同行评审、交叉互审、模拟主编终审、作者修改和原审稿人复审，再按期刊画像插入参考文献并逐页检查Word。"
