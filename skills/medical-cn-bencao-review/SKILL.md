@@ -1,6 +1,6 @@
 ---
 name: medical-cn-bencao-review
-description: Build, audit, multi-stage review, revise, and format reproducible Chinese materia medica manuscripts for any target herb or medicinal material. Use for 本草考证、历代名称与异名、基原与药性演变、古籍PDF校证、现代药理病理衔接、中文核心编辑初审、三名独立同行评审、交叉互审、模拟主编终审、修改后复审、证据降调、去模板化AI语言、AMA引用及投稿Word检查。
+description: Build, audit, multi-stage review, revise, and format reproducible Chinese materia medica manuscripts for any target herb or medicinal material. Use for 本草考证、历代名称与异名、基原与药性演变、古籍PDF校证、现代药理病理衔接、中文核心编辑初审、三名独立同行评审、交叉互审、模拟主编终审、修改后复审、证据降调、去模板化AI语言、目标期刊引文与参考文献格式审计及投稿Word检查。
 ---
 
 # 可复制的中文本草考证工作流
@@ -29,9 +29,9 @@ description: Build, audit, multi-stage review, revise, and format reproducible C
 | `OFFICIAL_STANDARDS` | 现行及关键历史版药典、部颁标准、地方标准或监管文件 |
 | `DISCOVERY_SOURCES` | 岐黄之术、目录数据库、图书馆目录和在线镜像，仅用于发现线索 |
 | `MODERN_DATABASES` | 用户可访问的中文数据库、PubMed及其他学术数据库 |
-| `TARGET_JOURNAL` | 目标期刊、文章类型、字数和格式要求 |
+| `TARGET_JOURNAL` | 目标期刊全名、栏目/文章类型、字数及官方投稿指南核验状态 |
 | `TABLE_POLICY` | 默认两张核心表；用户批准后方可调整数量或字段 |
-| `CITATION_POLICY` | 默认AMA顺序编码；同时记录语言、页码和网页访问日期要求 |
+| `CITATION_POLICY` | 据目标期刊当前官方要求冻结引文体系、正文标记、文后著录、排序、页码、DOI和版式；不得预设AMA |
 | `REVIEW_PROFILE` | 目标期刊审稿侧重点；默认执行中文核心本草类六阶段模拟审稿 |
 | `OUTPUTS` | 证据台账、初稿、DOCX、审计报告等交付物 |
 
@@ -63,7 +63,7 @@ description: Build, audit, multi-stage review, revise, and format reproducible C
 | 证据用途 | 名称、基原、部位、产地、炮制、药性、功效、毒性等 |
 | 校证状态 | 已核原图、可靠校勘本、仅据OCR、据转引、待回核、未命中 |
 | 版本差异 | 异文、字段冲突和可能原因 |
-| 引用状态 | 拟引用位置、临时编号、AMA核对状态 |
+| 引用状态 | 拟引用位置、临时标记、目标期刊格式及证据匹配核对状态 |
 | 限制与备注 | 证据边界、缺页、版本不明或不可访问情况 |
 
 证据层级：
@@ -122,20 +122,24 @@ description: Build, audit, multi-stage review, revise, and format reproducible C
 - 少数医家意见必须给出原始出处、时代语境和证据地位，不得写成历代共识。
 - 正文不得出现“按照某样文写作”“为了压缩图表”等过程说明。
 
-## 7. AMA顺序编码和书目审计
+## 7. 按目标期刊插入引文并审计书目
 
-正文、表格、图注和脚注共同参与首次引用排序。Markdown阶段使用方括号编码，Word中转换为上标。古籍和专著直接引文尽量给出版本与页码；网页写明页面题名、发布或更新日期、访问日期和URL。
+投稿格式不默认采用AMA。先明确目标期刊和稿件类型，再联网核验当前有效的官方投稿须知、投稿系统说明或正式模板，建立 `JOURNAL_CITATION_PROFILE`。至少记录引文体系、正文标记及标点位置、多篇合引规则、表图/脚注是否参与排序、文后排序和序号、著录标准及版本、作者列名、卷期页或文章号、DOI/URL、古籍/专著和版式要求，并保存官方来源URL与访问日期。
+
+目标期刊未明确或官方规则无法核实时，只能生成明确标注为“非投稿定稿”的工作稿，不得声称参考文献符合期刊要求。期刊未规定的项目写“未规定”或“待编辑部确认”，不能把常见做法冒充期刊规则。
+
+数字顺序制可在Markdown阶段暂用 `[n]` 作为内部标记；这不是最终投稿样式。著者—年份制直接按期刊规则撰写，禁止运行数字编号重排脚本。正文、表格、图注和脚注是否参与首次引用顺序，以期刊画像为准。
 
 不要为达到固定篇数填充无关文献。每条参考文献必须支持具体句子或表格行，且“证据台账 -> 正文/表格引用 -> 文末书目”三者一致。
 
-修改后运行：
+期刊采用数字顺序制时，修改后运行：
 
 ```bash
-python scripts/reorder_ama.py manuscript.md --write
-python scripts/reorder_ama.py manuscript.md
+python scripts/audit_numeric_citations.py manuscript.md --write
+python scripts/audit_numeric_citations.py manuscript.md
 ```
 
-详细规则见 [references/ama-and-audit.md](references/ama-and-audit.md)。
+该脚本只审计内部数字编号，不决定上标、括号、标点位置或文后著录格式。完整规则见 [references/journal-citation-and-audit.md](references/journal-citation-and-audit.md)。
 
 ## 8. 强制执行多阶段模拟审稿
 
@@ -151,17 +155,25 @@ python scripts/reorder_ama.py manuscript.md
 python scripts/reviewer_lint.py manuscript.md --output reviewer-language-audit.md
 ```
 
-脚本只生成线索，不自动修改文章。最终至少形成编辑初审、三份独立审稿意见、交叉互审表、模拟主编终审、作者响应台账和三份复审意见。完成修改后重新运行AMA审计；引用顺序可能因删改而变化。
+脚本只生成线索，不自动修改文章。最终至少形成编辑初审、三份独立审稿意见、交叉互审表、模拟主编终审、作者响应台账和三份复审意见。完成修改后按期刊画像重新执行引文与参考文献审计；引用顺序和呈现可能因删改而变化。
 
 ## 9. 生成和逐页核查Word
 
 编辑既有DOCX时优先原位修改并保留用户指定字体、字号和样式。由Markdown新建时可运行：
 
+数字顺序制必须显式传入期刊要求的正文标记和文后序号，例如：
+
 ```bash
-python scripts/build_bencao_docx.py manuscript.md manuscript.docx
+python scripts/build_bencao_docx.py manuscript.md manuscript.docx \
+  --citation-style superscript-bracket \
+  --reference-label-style bracket
 ```
 
-未指定期刊模板时采用中文核心常用默认值：中文正文宋体10.5磅，西文和拉丁学名Times New Roman 10.5磅，一级标题黑体13磅，主标题黑体18磅，参考文献宋体9磅；引文序号上标；表格使用三线表并跨页重复表头。
+著者—年份制使用 `--citation-style author-date --reference-label-style none`，且稿件中不得残留数字 `[n]` 标记。具体选项必须来自 `JOURNAL_CITATION_PROFILE`，不能让脚本替作者决定期刊格式。
+
+若期刊采用脚注、尾注或其他自定义引文系统，不使用上述自动转换；改用文档技能和期刊模板实现，并逐条检查注释与文后书目的对应关系。
+
+未指定期刊模板时可用中文核心常见字体制作“非投稿定稿”工作稿，但不得据此宣称符合目标期刊。投稿稿的字体、字号、引文标记、文后序号、缩进和行距均以已核期刊画像为准；表格按期刊要求设置并逐页检查。
 
 生成后必须把DOCX渲染为逐页图像或PDF，从第一页检查到末页。详细规则见 [references/word-and-qa.md](references/word-and-qa.md)。
 
@@ -174,12 +186,12 @@ python scripts/build_bencao_docx.py manuscript.md manuscript.docx
 3. 直接引文已核原图或可靠校勘本；OCR、转引和网页线索均有状态标记。
 4. 岐黄之术等发现来源中的关键线索已回核，未把网页地址写成纸本版本或页码。
 5. 两张默认表或经批准的替代表格逐行可追溯，未载字段保持“不详”。
-6. AMA首次引用顺序连续，无漏引、未定义引用、重复书目或未被引用书目。
+6. 已保存目标期刊当前官方格式来源和 `JOURNAL_CITATION_PROFILE`；引文体系、正文标记、排序及文后著录均与画像一致，无漏引、未定义引用、重复书目或未被引用书目。
 7. 现代药理、病理和临床证据没有越级外推，复方与单味药结论已分开。
 8. 编辑初审、三名独立评审、交叉互审、模拟主编终审、作者修改和原审稿人复审均已完成。
 9. 所有A级问题已解决；未解决B-D级问题、真实性/伦理/方法阻断项均已披露，且未把受阻稿件称为可投稿稿。
 10. 空泛价值判断、模板化衔接和无证据强结论已删除或具体化；锁定数据与直接引文未被误改。
-11. 修改后重新完成AMA审计，文稿语言、字数、字体和字号符合已核目标期刊要求或通用配置。
+11. 修改后重新完成期刊引文、参考文献和证据匹配审计；文稿语言、字数、字体和字号符合已核目标期刊要求。仅使用通用配置的文件明确标为“非投稿定稿”。
 12. DOCX已逐页检查表头、横竖版切换、字体替换、文字截断、URL溢出和异常空白。
 13. 交付说明列明全部模拟审稿材料、作者响应、自动检查结果和仍需原件复核的缺口。
 
@@ -190,9 +202,9 @@ python scripts/build_bencao_docx.py manuscript.md manuscript.docx
 异名/混用品：【TARGET_SYNONYMS】
 研究范围：【TARGET_SCOPE】
 核心资料：【CORE_SOURCES】
-目标期刊与字数：【TARGET_JOURNAL】
+目标期刊、栏目与字数：【TARGET_JOURNAL】
 表格要求：默认两张核心表；如需调整先说明理由并征得同意。
-引用与字体：AMA顺序编码；中文和西文字体按期刊或用户要求。
+引用与字体：先核验目标期刊当前官方投稿须知并建立JOURNAL_CITATION_PROFILE；正文引文、文后书目和Word版式全部按该画像执行，不默认AMA。
 交付：证据台账、问题轴/时间轴修订稿、多阶段模拟审稿包、作者响应台账、参考文献审计、逐页检查后的DOCX。
 先报告来源命中情况和关键缺口，再进入写作；不得引用未核验原文或虚构页码。
 内部工作稿完成后强制执行编辑初审、三名独立同行评审、交叉互审、模拟主编终审、作者修改及原审稿人复审；完整流程通过前不得称为可投稿初稿。
