@@ -13,6 +13,17 @@ from docx.shared import Cm, Pt
 
 BODY_FONT = "Songti SC"
 HEADING_FONT = "Heiti SC"
+NUMERIC_CITATION_RE = re.compile(
+    r"\[(?:\d+(?:-\d+)?)(?:\s*,\s*\d+(?:-\d+)?)*\]"
+)
+CITATION_STYLES = (
+    "superscript-number",
+    "superscript-bracket",
+    "inline-bracket",
+    "inline-parenthesis",
+    "author-date",
+)
+REFERENCE_LABEL_STYLES = ("dot", "bracket", "none")
 
 
 def set_font(run, font=BODY_FONT, size=10.5, bold=False):
@@ -118,8 +129,10 @@ def set_cant_split(row):
     tr_pr.append(cant_split)
 
 
-def add_markup_runs(paragraph, text, size=10.5, bold=False):
-    pattern = re.compile(r"(\*[^*]+\*|\[(?:\d+(?:-\d+)?)(?:\s*,\s*\d+(?:-\d+)?)*\])")
+def add_markup_runs(paragraph, text, size=10.5, bold=False, citation_style=None):
+    pattern = re.compile(
+        r"(\*[^*]+\*|\[(?:\d+(?:-\d+)?)(?:\s*,\s*\d+(?:-\d+)?)*\])"
+    )
     parts = pattern.split(text)
     for part in parts:
         if not part:
@@ -128,10 +141,23 @@ def add_markup_runs(paragraph, text, size=10.5, bold=False):
             run = paragraph.add_run(part[1:-1])
             set_font(run, "Times New Roman", size, bold)
             run.italic = True
-        elif re.fullmatch(r"\[(?:\d+(?:-\d+)?)(?:\s*,\s*\d+(?:-\d+)?)*\]", part):
-            run = paragraph.add_run(part[1:-1])
-            set_font(run, "Times New Roman", max(7.0, size * 0.78), False)
-            run.font.superscript = True
+        elif NUMERIC_CITATION_RE.fullmatch(part):
+            if citation_style in {None, "author-date"}:
+                raise ValueError(
+                    "Numeric [n] citation found without a numeric journal citation style"
+                )
+            number = part[1:-1]
+            labels = {
+                "superscript-number": number,
+                "superscript-bracket": part,
+                "inline-bracket": part,
+                "inline-parenthesis": f"({number})",
+            }
+            superscript = citation_style.startswith("superscript-")
+            run = paragraph.add_run(labels[citation_style])
+            run_size = max(7.0, size * 0.78) if superscript else size
+            set_font(run, "Times New Roman", run_size, False)
+            run.font.superscript = superscript
         else:
             for token in re.split(r"([\x20-\x7e]+)", part):
                 if not token:
@@ -141,18 +167,18 @@ def add_markup_runs(paragraph, text, size=10.5, bold=False):
                 set_font(run, token_font, size, bold)
 
 
-def set_cell_text(cell, text, size=8.5, bold=False):
+def set_cell_text(cell, text, size=8.5, bold=False, citation_style=None):
     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
     cell.text = ""
     p = cell.paragraphs[0]
     p.paragraph_format.line_spacing = 1.1
     p.paragraph_format.space_after = Pt(0)
     p.paragraph_format.first_line_indent = None
-    add_markup_runs(p, text, size, bold)
+    add_markup_runs(p, text, size, bold, citation_style)
     set_cell_padding(cell)
 
 
-def markdown_table(rows, doc, wide=False):
+def markdown_table(rows, doc, wide=False, citation_style=None):
     header = rows[0]
     body = rows[2:]
     table = doc.add_table(rows=1, cols=len(header))
@@ -163,7 +189,13 @@ def markdown_table(rows, doc, wide=False):
     for i, text in enumerate(header):
         cell = table.rows[0].cells[i]
         cell.width = Cm(widths[i])
-        set_cell_text(cell, text, size=8 if wide else 8.5, bold=True)
+        set_cell_text(
+            cell,
+            text,
+            size=8 if wide else 8.5,
+            bold=True,
+            citation_style=citation_style,
+        )
         set_cell_border(cell, "bottom", size="5")
     set_repeat_table_header(table.rows[0])
     set_cant_split(table.rows[0])
@@ -171,7 +203,12 @@ def markdown_table(rows, doc, wide=False):
         cells = table.add_row().cells
         for i, text in enumerate(row):
             cells[i].width = Cm(widths[i])
-            set_cell_text(cells[i], text, size=8.0 if wide else 8.6)
+            set_cell_text(
+                cells[i],
+                text,
+                size=8.0 if wide else 8.6,
+                citation_style=citation_style,
+            )
         set_cant_split(table.rows[-1])
     set_table_borders(table)
     set_table_widths(table, widths)
@@ -237,32 +274,59 @@ def add_heading(doc, text, level):
     return p
 
 
-def add_paragraph_with_italics(doc, text, body_size=10.5):
+def add_paragraph_with_italics(
+    doc, text, body_size=10.5, citation_style=None
+):
     p = doc.add_paragraph()
     p.paragraph_format.line_spacing = 1.25
     p.paragraph_format.space_after = Pt(6)
     p.paragraph_format.first_line_indent = Cm(0.74)
-    add_markup_runs(p, text, body_size, False)
+    add_markup_runs(p, text, body_size, False, citation_style)
     return p
 
 
-def add_reference_paragraph(doc, line):
+def add_reference_paragraph(
+    doc, line, reference_label_style, citation_style
+):
     match = re.match(r"^\[(\d+)\]\s*(.*)$", line)
     if not match:
-        return add_paragraph_with_italics(doc, line, 9)
+        return add_paragraph_with_italics(doc, line, 9, citation_style)
+    if reference_label_style == "none":
+        raise ValueError(
+            "Numbered [n] reference found while reference label style is none"
+        )
     number, text = match.groups()
     p = doc.add_paragraph()
     p.paragraph_format.line_spacing = 1.0
     p.paragraph_format.space_after = Pt(2)
     p.paragraph_format.left_indent = Cm(0.65)
     p.paragraph_format.first_line_indent = Cm(-0.65)
-    run = p.add_run(f"{number}. ")
+    labels = {"dot": f"{number}. ", "bracket": f"[{number}] "}
+    run = p.add_run(labels[reference_label_style])
     set_font(run, "Times New Roman", 9, False)
-    add_markup_runs(p, text, 9, False)
+    add_markup_runs(p, text, 9, False, citation_style)
     return p
 
 
-def build(src, out):
+def validate_citation_configuration(lines, citation_style, reference_label_style):
+    text = "\n".join(lines)
+    has_numeric_markers = bool(NUMERIC_CITATION_RE.search(text))
+    if citation_style == "author-date":
+        if reference_label_style != "none":
+            raise ValueError(
+                "Author-date citations require --reference-label-style none"
+            )
+        if has_numeric_markers:
+            raise ValueError(
+                "Author-date manuscript still contains canonical numeric [n] markers"
+            )
+    elif reference_label_style == "none":
+        raise ValueError(
+            "Numeric citation styles require dot or bracket reference labels"
+        )
+
+
+def build(src, out, citation_style, reference_label_style):
     doc = Document()
     set_section(doc.sections[0], landscape=False)
     styles = doc.styles
@@ -273,6 +337,7 @@ def build(src, out):
     styles["Normal"].font.size = Pt(10.5)
 
     lines = src.read_text(encoding="utf-8").splitlines()
+    validate_citation_configuration(lines, citation_style, reference_label_style)
     table_count = 0
     in_refs = False
     landscape_active = False
@@ -313,7 +378,12 @@ def build(src, out):
             if not wide and landscape_active:
                 set_section(doc.add_section(WD_SECTION.NEW_PAGE), landscape=False)
                 landscape_active = False
-            markdown_table(rows, doc, wide=wide)
+            markdown_table(
+                rows,
+                doc,
+                wide=wide,
+                citation_style=citation_style,
+            )
             if wide:
                 doc.add_paragraph()
             continue
@@ -322,7 +392,15 @@ def build(src, out):
             set_section(doc.add_section(WD_SECTION.NEW_PAGE), landscape=True)
             landscape_active = True
 
-        p = add_reference_paragraph(doc, line) if in_refs else add_paragraph_with_italics(doc, line, 10.5)
+        p = (
+            add_reference_paragraph(
+                doc, line, reference_label_style, citation_style
+            )
+            if in_refs
+            else add_paragraph_with_italics(
+                doc, line, 10.5, citation_style
+            )
+        )
         if line.startswith("作者") or line.startswith("单位"):
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             p.paragraph_format.first_line_indent = None
@@ -341,7 +419,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Build a Chinese bencao review DOCX from Markdown.")
     parser.add_argument("input", type=Path, help="Markdown manuscript path")
     parser.add_argument("output", type=Path, nargs="?", help="Output DOCX path")
+    parser.add_argument(
+        "--citation-style",
+        required=True,
+        choices=CITATION_STYLES,
+        help="Inline citation rendering from the verified journal profile",
+    )
+    parser.add_argument(
+        "--reference-label-style",
+        required=True,
+        choices=REFERENCE_LABEL_STYLES,
+        help="Reference-list label style from the verified journal profile",
+    )
     args = parser.parse_args()
     output = args.output or args.input.with_name(args.input.stem + "_投稿稿.docx")
-    build(args.input, output)
+    build(
+        args.input,
+        output,
+        args.citation_style,
+        args.reference_label_style,
+    )
     print(output)
